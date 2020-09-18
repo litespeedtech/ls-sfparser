@@ -1,0 +1,185 @@
+--- ls-sfparser.pre	2020-09-19 00:56:39.762850363 -0400
++++ ls-sfparser.c	2020-09-19 00:56:41.858850363 -0400
+@@ -320,7 +320,7 @@ void ls_sfp__flush_buffer (YY_BUFFER_STA
+ void ls_sfp_push_buffer_state (YY_BUFFER_STATE new_buffer ,yyscan_t yyscanner );
+ void ls_sfp_pop_buffer_state (yyscan_t yyscanner );
+ 
+-static void ls_sfp_ensure_buffer_stack (yyscan_t yyscanner );
++static int ls_sfp_ensure_buffer_stack (yyscan_t yyscanner );
+ static void ls_sfp__load_buffer_state (yyscan_t yyscanner );
+ static void ls_sfp__init_buffer (YY_BUFFER_STATE b,FILE *file ,yyscan_t yyscanner );
+ 
+@@ -1107,7 +1107,8 @@ YY_DECL
+ 			yyout = stdout;
+ 
+ 		if ( ! YY_CURRENT_BUFFER ) {
+-			ls_sfp_ensure_buffer_stack (yyscanner);
++			if (ls_sfp_ensure_buffer_stack (yyscanner))
++                return -1;
+ 			YY_CURRENT_BUFFER_LVALUE =
+ 				ls_sfp__create_buffer(yyin,YY_BUF_SIZE ,yyscanner);
+ 		}
+@@ -2115,8 +2116,11 @@ static int yy_get_next_buffer (yyscan_t
+ 				b->yy_ch_buf = 0;
+ 
+ 			if ( ! b->yy_ch_buf )
++            {
+ 				YY_FATAL_ERROR(
+ 				"fatal error - scanner input buffer overflow" );
++                return EOB_ACT_END_OF_FILE;
++            }
+ 
+ 			yyg->yy_c_buf_p = &b->yy_ch_buf[yy_c_buf_p_offset];
+ 
+@@ -2159,7 +2163,10 @@ static int yy_get_next_buffer (yyscan_t
+ 		yy_size_t new_size = yyg->yy_n_chars + number_to_move + (yyg->yy_n_chars >> 1);
+ 		YY_CURRENT_BUFFER_LVALUE->yy_ch_buf = (char *) ls_sfp_realloc((void *) YY_CURRENT_BUFFER_LVALUE->yy_ch_buf,new_size ,yyscanner );
+ 		if ( ! YY_CURRENT_BUFFER_LVALUE->yy_ch_buf )
++        {
+ 			YY_FATAL_ERROR( "out of dynamic memory in yy_get_next_buffer()" );
++            return EOB_ACT_END_OF_FILE;
++        }
+ 	}
+ 
+ 	yyg->yy_n_chars += number_to_move;
+@@ -2315,7 +2322,8 @@ static int yy_get_next_buffer (yyscan_t
+     struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
+ 
+ 	if ( ! YY_CURRENT_BUFFER ){
+-        ls_sfp_ensure_buffer_stack (yyscanner);
++        if (ls_sfp_ensure_buffer_stack (yyscanner))
++            return;
+ 		YY_CURRENT_BUFFER_LVALUE =
+             ls_sfp__create_buffer(yyin,YY_BUF_SIZE ,yyscanner);
+ 	}
+@@ -2337,7 +2345,8 @@ static int yy_get_next_buffer (yyscan_t
+ 	 *		ls_sfp_pop_buffer_state();
+ 	 *		ls_sfp_push_buffer_state(new_buffer);
+      */
+-	ls_sfp_ensure_buffer_stack (yyscanner);
++	if (ls_sfp_ensure_buffer_stack (yyscanner))
++        return;
+ 	if ( YY_CURRENT_BUFFER == new_buffer )
+ 		return;
+ 
+@@ -2381,7 +2390,10 @@ static void ls_sfp__load_buffer_state  (
+     
+ 	b = (YY_BUFFER_STATE) ls_sfp_alloc(sizeof( struct yy_buffer_state ) ,yyscanner );
+ 	if ( ! b )
++    {
+ 		YY_FATAL_ERROR( "out of dynamic memory in ls_sfp__create_buffer()" );
++        return NULL;
++    }
+ 
+ 	b->yy_buf_size = size;
+ 
+@@ -2390,7 +2402,10 @@ static void ls_sfp__load_buffer_state  (
+ 	 */
+ 	b->yy_ch_buf = (char *) ls_sfp_alloc(b->yy_buf_size + 2 ,yyscanner );
+ 	if ( ! b->yy_ch_buf )
++    {
+ 		YY_FATAL_ERROR( "out of dynamic memory in ls_sfp__create_buffer()" );
++        return NULL;
++    }
+ 
+ 	b->yy_is_our_buffer = 1;
+ 
+@@ -2492,7 +2507,8 @@ void ls_sfp_push_buffer_state (YY_BUFFER
+ 	if (new_buffer == NULL)
+ 		return;
+ 
+-	ls_sfp_ensure_buffer_stack(yyscanner);
++	if (ls_sfp_ensure_buffer_stack(yyscanner))
++        return;
+ 
+ 	/* This block is copied from ls_sfp__switch_to_buffer. */
+ 	if ( YY_CURRENT_BUFFER )
+@@ -2537,7 +2553,7 @@ void ls_sfp_pop_buffer_state (yyscan_t y
+ /* Allocates the stack if it does not exist.
+  *  Guarantees space for at least one push.
+  */
+-static void ls_sfp_ensure_buffer_stack (yyscan_t yyscanner)
++static int ls_sfp_ensure_buffer_stack (yyscan_t yyscanner)
+ {
+ 	int num_to_alloc;
+     struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
+@@ -2553,13 +2569,16 @@ static void ls_sfp_ensure_buffer_stack (
+ 								(num_to_alloc * sizeof(struct yy_buffer_state*)
+ 								, yyscanner);
+ 		if ( ! yyg->yy_buffer_stack )
++        {
+ 			YY_FATAL_ERROR( "out of dynamic memory in ls_sfp_ensure_buffer_stack()" );
++            return -1;
++        }
+ 								  
+ 		memset(yyg->yy_buffer_stack, 0, num_to_alloc * sizeof(struct yy_buffer_state*));
+ 				
+ 		yyg->yy_buffer_stack_max = num_to_alloc;
+ 		yyg->yy_buffer_stack_top = 0;
+-		return;
++		return 0;
+ 	}
+ 
+ 	if (yyg->yy_buffer_stack_top >= (yyg->yy_buffer_stack_max) - 1){
+@@ -2573,12 +2592,17 @@ static void ls_sfp_ensure_buffer_stack (
+ 								num_to_alloc * sizeof(struct yy_buffer_state*)
+ 								, yyscanner);
+ 		if ( ! yyg->yy_buffer_stack )
++        {
+ 			YY_FATAL_ERROR( "out of dynamic memory in ls_sfp_ensure_buffer_stack()" );
++            return -1;
++        }
+ 
+ 		/* zero only the new slots.*/
+ 		memset(yyg->yy_buffer_stack + yyg->yy_buffer_stack_max, 0, grow_size * sizeof(struct yy_buffer_state*));
+ 		yyg->yy_buffer_stack_max = num_to_alloc;
+ 	}
++
++    return 0;
+ }
+ 
+ /** Setup the input buffer state to scan directly from a user-specified character buffer.
+@@ -2599,7 +2623,10 @@ YY_BUFFER_STATE ls_sfp__scan_buffer  (ch
+ 
+ 	b = (YY_BUFFER_STATE) ls_sfp_alloc(sizeof( struct yy_buffer_state ) ,yyscanner );
+ 	if ( ! b )
++    {
+ 		YY_FATAL_ERROR( "out of dynamic memory in ls_sfp__scan_buffer()" );
++        return 0;
++    }
+ 
+ 	b->yy_buf_size = size - 2;	/* "- 2" to take care of EOB's */
+ 	b->yy_buf_pos = b->yy_ch_buf = base;
+@@ -2648,7 +2675,10 @@ YY_BUFFER_STATE ls_sfp__scan_bytes  (yyc
+ 	n = _yybytes_len + 2;
+ 	buf = (char *) ls_sfp_alloc(n ,yyscanner );
+ 	if ( ! buf )
++    {
+ 		YY_FATAL_ERROR( "out of dynamic memory in ls_sfp__scan_bytes()" );
++        return NULL;
++    }
+ 
+ 	for ( i = 0; i < _yybytes_len; ++i )
+ 		buf[i] = yybytes[i];
+@@ -2657,7 +2687,10 @@ YY_BUFFER_STATE ls_sfp__scan_bytes  (yyc
+ 
+ 	b = ls_sfp__scan_buffer(buf,n ,yyscanner);
+ 	if ( ! b )
++    {
+ 		YY_FATAL_ERROR( "bad buffer in ls_sfp__scan_bytes()" );
++        return NULL;
++    }
+ 
+ 	/* It's okay to grow etc. this buffer, and we should throw it
+ 	 * away when we're done.
+@@ -2684,7 +2717,10 @@ YY_BUFFER_STATE ls_sfp__scan_bytes  (yyc
+ 			yyg->yy_start_stack = (int *) ls_sfp_realloc((void *) yyg->yy_start_stack,new_size ,yyscanner );
+ 
+ 		if ( ! yyg->yy_start_stack )
++        {
+ 			YY_FATAL_ERROR( "out of memory expanding start-condition stack" );
++            return;
++        }
+ 		}
+ 
+ 	yyg->yy_start_stack[yyg->yy_start_stack_ptr++] = YY_START;
