@@ -6,9 +6,24 @@
 
 
 static int
-callback (void *user_data, enum ls_sf_dt type, char *str)
+callback (void *input, enum ls_sf_dt type, char *str, size_t len, int off)
 {
-    printf("type: %s; str: `%s'\n", ls_sf_dt2str[type], str);
+    printf("type: %s; str: `%s'; len: %zd; off: %d\n", ls_sf_dt2str[type],
+                                                                str, len, off);
+    if (off >= 0)
+    {
+        if (0 != memcmp(input + off, str, len))
+        {
+            printf("error: offset\n");
+            return -1;
+        }
+    }
+    else if (!(type == LS_SF_DT_BOOLEAN && len == 1 && str[0] == '1'))
+    {
+        printf("error: expected boolean 1\n");
+        return -1;
+    }
+
     return 0;
 }
 
@@ -55,6 +70,6 @@ main (int argc, char **argv)
     }
 
     ret = ls_sf_parse((enum ls_sf_tlt) tlt, input, input_sz, callback,
-                                                NULL, mem, sizeof(mem));
+                                                input, mem, sizeof(mem));
     return ret == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
 }

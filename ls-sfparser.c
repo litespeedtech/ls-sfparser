@@ -780,7 +780,7 @@ struct ls_sf_parser
 {
     /* Return 0 on success, -1 on error to stop parsing. */
     int              (*callback)(void *user_data, enum ls_sf_dt,
-                                                        char *str);
+                                            char *str, size_t len, int off);
     void              *user_data;
     const char        *errmsg;
     enum ls_sf_tlt     top_level_type;
@@ -794,11 +794,15 @@ struct ls_sf_parser
     char              *last_malloced;
 };
 #define SFP ((struct ls_sf_parser *) yyextra)
-#define CALLBACK(dt_, str_) do {                                    \
-    if (SFP->callback(SFP->user_data, (dt_), (str_)))               \
+#define CALLBACK(dt_, str_, len_, addl_) do {                       \
+    if (SFP->callback(SFP->user_data, (dt_), (str_), (len_),        \
+            (addl_) >= 0 ?                                          \
+            yyg->yy_c_buf_p - yyleng - YY_CURRENT_BUFFER->yy_ch_buf + (addl_) :  \
+            (addl_)))                                               \
         return -1;                                                  \
 } while (0)
 #define YY_FATAL_ERROR(msg_) do {                                   \
+    (void) yy_fatal_error /* silence compiler warning */;           \
     ((struct ls_sf_parser *)                                        \
                 (ls_sfp_get_extra(yyscanner)))->errmsg = (msg_);         \
     ((struct yyguts_t*)yyscanner)->yy_start = 1 + 2 * ERROR_STATE;  \
@@ -813,7 +817,7 @@ struct ls_sf_parser
 
 
 
-#line 817 "ls-sfparser.c"
+#line 821 "ls-sfparser.c"
 
 #define INITIAL 0
 #define DICTIONARY 1
@@ -1062,7 +1066,7 @@ YY_DECL
 	register int yy_act;
     struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
 
-#line 96 "ls-sfparser.l"
+#line 101 "ls-sfparser.l"
 
 
     char TRUE[] = "1";
@@ -1083,7 +1087,7 @@ YY_DECL
         return -1;
     }
 
-#line 1087 "ls-sfparser.c"
+#line 1091 "ls-sfparser.c"
 
 	if ( !yyg->yy_init )
 		{
@@ -1165,69 +1169,69 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 117 "ls-sfparser.l"
+#line 122 "ls-sfparser.l"
 /* Eat up whitespace */
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 118 "ls-sfparser.l"
-{ CALLBACK(LS_SF_DT_NAME, yytext);
+#line 123 "ls-sfparser.l"
+{ CALLBACK(LS_SF_DT_NAME, yytext, yyleng, 0);
                                       BEGIN(DIC_MEMBER_EQ); }
 	YY_BREAK
 
 
 case YY_STATE_EOF(DIC_NEXT_ITEM):
-#line 123 "ls-sfparser.l"
+#line 128 "ls-sfparser.l"
 { return -1; }
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 124 "ls-sfparser.l"
+#line 129 "ls-sfparser.l"
 /* Eat up whitespace */
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 125 "ls-sfparser.l"
-{ CALLBACK(LS_SF_DT_NAME, yytext);
+#line 130 "ls-sfparser.l"
+{ CALLBACK(LS_SF_DT_NAME, yytext, yyleng, 0);
                                       BEGIN(DIC_MEMBER_EQ); }
 	YY_BREAK
 
 case 5:
 YY_RULE_SETUP
-#line 129 "ls-sfparser.l"
-{ CALLBACK(LS_SF_DT_INNER_LIST_BEGIN, yytext + 1);
+#line 134 "ls-sfparser.l"
+{ CALLBACK(LS_SF_DT_INNER_LIST_BEGIN, yytext + 1, yyleng - 1, 1);
                                       BEGIN(INNER_LIST); }
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 132 "ls-sfparser.l"
+#line 137 "ls-sfparser.l"
 { BEGIN(DIC_MEMBER_ITEM); }
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 134 "ls-sfparser.l"
+#line 139 "ls-sfparser.l"
 { TRUE[0] = '1';
-                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE);
+                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE, 1, -1);
                                       BEGIN(DIC_PARAM_KEY); }
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 138 "ls-sfparser.l"
+#line 143 "ls-sfparser.l"
 { TRUE[0] = '1';
-                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE);
+                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE, 1, -1);
                                       BEGIN(DIC_NEXT_ITEM); }
 	YY_BREAK
 case YY_STATE_EOF(DIC_MEMBER_EQ):
-#line 142 "ls-sfparser.l"
+#line 147 "ls-sfparser.l"
 { TRUE[0] = '1';
-                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE);
+                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE, 1, -1);
                                       return 0; }
 	YY_BREAK
 
 case 9:
 YY_RULE_SETUP
-#line 147 "ls-sfparser.l"
-{ CALLBACK(LS_SF_DT_INNER_LIST_END, yytext);
+#line 152 "ls-sfparser.l"
+{ CALLBACK(LS_SF_DT_INNER_LIST_END, yytext, yyleng, 0);
                                       if (SFP->top_level_type == LS_SF_TLT_DICTIONARY)
                                           BEGIN(DIC_OPTIONAL_PARAM);
                                       else
@@ -1235,65 +1239,65 @@ YY_RULE_SETUP
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 152 "ls-sfparser.l"
-{ CALLBACK(LS_SF_DT_INTEGER, yytext);
+#line 157 "ls-sfparser.l"
+{ CALLBACK(LS_SF_DT_INTEGER, yytext, yyleng, 0);
                                       BEGIN(IL_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 155 "ls-sfparser.l"
-{ CALLBACK(LS_SF_DT_DECIMAL, yytext);
+#line 160 "ls-sfparser.l"
+{ CALLBACK(LS_SF_DT_DECIMAL, yytext, yyleng, 0);
                                       BEGIN(IL_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 158 "ls-sfparser.l"
+#line 163 "ls-sfparser.l"
 {
                                       yytext[yyleng - 1] = '\0';
-                                      CALLBACK(LS_SF_DT_STRING, yytext + 1);
+                                      CALLBACK(LS_SF_DT_STRING, yytext + 1, yyleng - 2, 1);
                                       BEGIN(IL_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 163 "ls-sfparser.l"
-{ CALLBACK(LS_SF_DT_TOKEN, yytext);
+#line 168 "ls-sfparser.l"
+{ CALLBACK(LS_SF_DT_TOKEN, yytext, yyleng, 0);
                                       BEGIN(IL_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 166 "ls-sfparser.l"
+#line 171 "ls-sfparser.l"
 {
                                       yytext[yyleng - 1] = '\0';
-                                      CALLBACK(LS_SF_DT_BYTESEQ, yytext + 1);
+                                      CALLBACK(LS_SF_DT_BYTESEQ, yytext + 1, yyleng - 2, 1);
                                       BEGIN(IL_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 171 "ls-sfparser.l"
-{ CALLBACK(LS_SF_DT_BOOLEAN, yytext + 1);
+#line 176 "ls-sfparser.l"
+{ CALLBACK(LS_SF_DT_BOOLEAN, yytext + 1, yyleng - 1, 1);
                                       BEGIN(IL_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case YY_STATE_EOF(INNER_LIST):
-#line 174 "ls-sfparser.l"
+#line 179 "ls-sfparser.l"
 { return -1; }
 	YY_BREAK
 
 
 case 16:
 YY_RULE_SETUP
-#line 178 "ls-sfparser.l"
+#line 183 "ls-sfparser.l"
 { BEGIN(IL_PARAM_KEY); }
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 179 "ls-sfparser.l"
-{ CALLBACK(LS_SF_DT_INNER_LIST_END, yytext);
+#line 184 "ls-sfparser.l"
+{ CALLBACK(LS_SF_DT_INNER_LIST_END, yytext, yyleng, 0);
                                       if (SFP->top_level_type == LS_SF_TLT_DICTIONARY)
                                           BEGIN(DIC_OPTIONAL_PARAM);
                                       else
@@ -1301,46 +1305,46 @@ YY_RULE_SETUP
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 184 "ls-sfparser.l"
+#line 189 "ls-sfparser.l"
 { BEGIN(INNER_LIST); }
 	YY_BREAK
 case YY_STATE_EOF(IL_OPTIONAL_PARAM):
-#line 185 "ls-sfparser.l"
+#line 190 "ls-sfparser.l"
 { return -1; }
 	YY_BREAK
 
 case 19:
 YY_RULE_SETUP
-#line 188 "ls-sfparser.l"
-{ CALLBACK(LS_SF_DT_PARAM_NAME, yytext);
+#line 193 "ls-sfparser.l"
+{ CALLBACK(LS_SF_DT_PARAM_NAME, yytext, yyleng, 0);
                                         BEGIN(IL_PARAM_EQ); }
 	YY_BREAK
 
 case 20:
 YY_RULE_SETUP
-#line 192 "ls-sfparser.l"
+#line 197 "ls-sfparser.l"
 { BEGIN(IL_PARAM_ITEM); }
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 193 "ls-sfparser.l"
+#line 198 "ls-sfparser.l"
 { TRUE[0] = '1';
-                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE);
+                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE, 1, -1);
                                       BEGIN(IL_OPTIONAL_PARAM); }
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 196 "ls-sfparser.l"
+#line 201 "ls-sfparser.l"
 { TRUE[0] = '1';
-                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE);
+                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE, 1, -1);
                                       BEGIN(IL_PARAM_KEY); }
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 199 "ls-sfparser.l"
+#line 204 "ls-sfparser.l"
 { TRUE[0] = '1';
-                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE);
-                                      CALLBACK(LS_SF_DT_INNER_LIST_END, yytext);
+                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE, 1, -1);
+                                      CALLBACK(LS_SF_DT_INNER_LIST_END, yytext, yyleng, 0);
                                       if (SFP->top_level_type == LS_SF_TLT_DICTIONARY)
                                           BEGIN(DIC_OPTIONAL_PARAM);
                                       else
@@ -1350,180 +1354,180 @@ YY_RULE_SETUP
 
 case 24:
 YY_RULE_SETUP
-#line 209 "ls-sfparser.l"
-{ CALLBACK(LS_SF_DT_INTEGER, yytext);
+#line 214 "ls-sfparser.l"
+{ CALLBACK(LS_SF_DT_INTEGER, yytext, yyleng, 0);
                                       BEGIN(IL_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 212 "ls-sfparser.l"
-{ CALLBACK(LS_SF_DT_DECIMAL, yytext);
+#line 217 "ls-sfparser.l"
+{ CALLBACK(LS_SF_DT_DECIMAL, yytext, yyleng, 0);
                                       BEGIN(IL_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 215 "ls-sfparser.l"
+#line 220 "ls-sfparser.l"
 {
                                       yytext[yyleng - 1] = '\0';
-                                      CALLBACK(LS_SF_DT_STRING, yytext + 1);
+                                      CALLBACK(LS_SF_DT_STRING, yytext + 1, yyleng - 2, 1);
                                       BEGIN(IL_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 220 "ls-sfparser.l"
-{ CALLBACK(LS_SF_DT_TOKEN, yytext);
+#line 225 "ls-sfparser.l"
+{ CALLBACK(LS_SF_DT_TOKEN, yytext, yyleng, 0);
                                       BEGIN(IL_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 223 "ls-sfparser.l"
+#line 228 "ls-sfparser.l"
 {
                                       yytext[yyleng - 1] = '\0';
-                                      CALLBACK(LS_SF_DT_BYTESEQ, yytext + 1);
+                                      CALLBACK(LS_SF_DT_BYTESEQ, yytext + 1, yyleng - 2, 1);
                                       BEGIN(IL_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 228 "ls-sfparser.l"
-{ CALLBACK(LS_SF_DT_BOOLEAN, yytext + 1);
+#line 233 "ls-sfparser.l"
+{ CALLBACK(LS_SF_DT_BOOLEAN, yytext + 1, yyleng - 1, 1);
                                       BEGIN(IL_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case YY_STATE_EOF(IL_PARAM_ITEM):
-#line 231 "ls-sfparser.l"
+#line 236 "ls-sfparser.l"
 { return -1; }
 	YY_BREAK
 
 
 case 30:
 YY_RULE_SETUP
-#line 235 "ls-sfparser.l"
-{ CALLBACK(LS_SF_DT_INTEGER, yytext);
+#line 240 "ls-sfparser.l"
+{ CALLBACK(LS_SF_DT_INTEGER, yytext, yyleng, 0);
                                       BEGIN(DIC_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 238 "ls-sfparser.l"
-{ CALLBACK(LS_SF_DT_DECIMAL, yytext);
+#line 243 "ls-sfparser.l"
+{ CALLBACK(LS_SF_DT_DECIMAL, yytext, yyleng, 0);
                                       BEGIN(DIC_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 241 "ls-sfparser.l"
+#line 246 "ls-sfparser.l"
 {
                                       yytext[yyleng - 1] = '\0';
-                                      CALLBACK(LS_SF_DT_STRING, yytext + 1);
+                                      CALLBACK(LS_SF_DT_STRING, yytext + 1, yyleng - 2, 1);
                                       BEGIN(DIC_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case 33:
 YY_RULE_SETUP
-#line 246 "ls-sfparser.l"
-{ CALLBACK(LS_SF_DT_TOKEN, yytext);
+#line 251 "ls-sfparser.l"
+{ CALLBACK(LS_SF_DT_TOKEN, yytext, yyleng, 0);
                                       BEGIN(DIC_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case 34:
 YY_RULE_SETUP
-#line 249 "ls-sfparser.l"
+#line 254 "ls-sfparser.l"
 {
                                       yytext[yyleng - 1] = '\0';
-                                      CALLBACK(LS_SF_DT_BYTESEQ, yytext + 1);
+                                      CALLBACK(LS_SF_DT_BYTESEQ, yytext + 1, yyleng - 2, 1);
                                       BEGIN(DIC_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case 35:
 YY_RULE_SETUP
-#line 254 "ls-sfparser.l"
-{ CALLBACK(LS_SF_DT_BOOLEAN, yytext + 1);
+#line 259 "ls-sfparser.l"
+{ CALLBACK(LS_SF_DT_BOOLEAN, yytext + 1, yyleng - 1, 1);
                                       BEGIN(DIC_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case YY_STATE_EOF(DIC_MEMBER_ITEM):
-#line 257 "ls-sfparser.l"
+#line 262 "ls-sfparser.l"
 { return -1; }
 	YY_BREAK
 
 
 case 36:
 YY_RULE_SETUP
-#line 261 "ls-sfparser.l"
+#line 266 "ls-sfparser.l"
 { return -1; }
 	YY_BREAK
 case 37:
 YY_RULE_SETUP
-#line 262 "ls-sfparser.l"
+#line 267 "ls-sfparser.l"
 /* Eat up whitespace */
 	YY_BREAK
 case 38:
 YY_RULE_SETUP
-#line 263 "ls-sfparser.l"
+#line 268 "ls-sfparser.l"
 { BEGIN(DIC_PARAM_KEY); }
 	YY_BREAK
 case 39:
 YY_RULE_SETUP
-#line 264 "ls-sfparser.l"
+#line 269 "ls-sfparser.l"
 { BEGIN(DIC_NEXT_ITEM); }
 	YY_BREAK
 case YY_STATE_EOF(DIC_OPTIONAL_PARAM):
-#line 265 "ls-sfparser.l"
+#line 270 "ls-sfparser.l"
 { return 0; }
 	YY_BREAK
 
 
 case 40:
 YY_RULE_SETUP
-#line 269 "ls-sfparser.l"
+#line 274 "ls-sfparser.l"
 /* Eat up whitespace */
 	YY_BREAK
 case 41:
 YY_RULE_SETUP
-#line 270 "ls-sfparser.l"
-{ CALLBACK(LS_SF_DT_PARAM_NAME, yytext);
+#line 275 "ls-sfparser.l"
+{ CALLBACK(LS_SF_DT_PARAM_NAME, yytext, yyleng, 0);
                                         BEGIN(DIC_PARAM_EQ); }
 	YY_BREAK
 
 
 case 42:
 YY_RULE_SETUP
-#line 275 "ls-sfparser.l"
+#line 280 "ls-sfparser.l"
 { BEGIN(DIC_PARAM_ITEM); }
 	YY_BREAK
 case 43:
 YY_RULE_SETUP
-#line 276 "ls-sfparser.l"
+#line 281 "ls-sfparser.l"
 { TRUE[0] = '1';
-                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE);
+                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE, 1, -1);
                                       BEGIN(DIC_NEXT_ITEM);
                                     }
 	YY_BREAK
 case 44:
 YY_RULE_SETUP
-#line 280 "ls-sfparser.l"
+#line 285 "ls-sfparser.l"
 { TRUE[0] = '1';
-                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE);
+                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE, 1, -1);
                                       BEGIN(DIC_PARAM_KEY);
                                     }
 	YY_BREAK
 case 45:
 YY_RULE_SETUP
-#line 284 "ls-sfparser.l"
+#line 289 "ls-sfparser.l"
 { TRUE[0] = '1';
-                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE);
+                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE, 1, -1);
                                       BEGIN(DIC_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case YY_STATE_EOF(DIC_PARAM_EQ):
-#line 288 "ls-sfparser.l"
+#line 293 "ls-sfparser.l"
 { TRUE[0] = '1';
-                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE);
+                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE, 1, -1);
                                       return 0;
                                     }
 	YY_BREAK
@@ -1531,131 +1535,131 @@ case YY_STATE_EOF(DIC_PARAM_EQ):
 
 case 46:
 YY_RULE_SETUP
-#line 295 "ls-sfparser.l"
-{ CALLBACK(LS_SF_DT_INTEGER, yytext);
+#line 300 "ls-sfparser.l"
+{ CALLBACK(LS_SF_DT_INTEGER, yytext, yyleng, 0);
                                       BEGIN(DIC_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case 47:
 YY_RULE_SETUP
-#line 298 "ls-sfparser.l"
-{ CALLBACK(LS_SF_DT_DECIMAL, yytext);
+#line 303 "ls-sfparser.l"
+{ CALLBACK(LS_SF_DT_DECIMAL, yytext, yyleng, 0);
                                       BEGIN(DIC_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case 48:
 YY_RULE_SETUP
-#line 301 "ls-sfparser.l"
+#line 306 "ls-sfparser.l"
 {
                                       yytext[yyleng - 1] = '\0';
-                                      CALLBACK(LS_SF_DT_STRING, yytext + 1);
+                                      CALLBACK(LS_SF_DT_STRING, yytext + 1, yyleng - 2, 1);
                                       BEGIN(DIC_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case 49:
 YY_RULE_SETUP
-#line 306 "ls-sfparser.l"
-{ CALLBACK(LS_SF_DT_TOKEN, yytext);
+#line 311 "ls-sfparser.l"
+{ CALLBACK(LS_SF_DT_TOKEN, yytext, yyleng, 0);
                                       BEGIN(DIC_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case 50:
 YY_RULE_SETUP
-#line 309 "ls-sfparser.l"
+#line 314 "ls-sfparser.l"
 {
                                       yytext[yyleng - 1] = '\0';
-                                      CALLBACK(LS_SF_DT_BYTESEQ, yytext + 1);
+                                      CALLBACK(LS_SF_DT_BYTESEQ, yytext + 1, yyleng - 2, 1);
                                       BEGIN(DIC_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case 51:
 YY_RULE_SETUP
-#line 314 "ls-sfparser.l"
-{ CALLBACK(LS_SF_DT_BOOLEAN, yytext + 1);
+#line 319 "ls-sfparser.l"
+{ CALLBACK(LS_SF_DT_BOOLEAN, yytext + 1, yyleng - 1, 1);
                                       BEGIN(DIC_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case YY_STATE_EOF(DIC_PARAM_ITEM):
-#line 317 "ls-sfparser.l"
+#line 322 "ls-sfparser.l"
 { return -1; }
 	YY_BREAK
 
 
 case 52:
 YY_RULE_SETUP
-#line 321 "ls-sfparser.l"
+#line 326 "ls-sfparser.l"
 /* Eat up whitespace */
 	YY_BREAK
 case 53:
 YY_RULE_SETUP
-#line 322 "ls-sfparser.l"
+#line 327 "ls-sfparser.l"
 { return -1; }
 	YY_BREAK
 case 54:
 YY_RULE_SETUP
-#line 323 "ls-sfparser.l"
+#line 328 "ls-sfparser.l"
 { yyless(0); BEGIN(LIST_NEXT_ITEM); }
 	YY_BREAK
 
 
 case YY_STATE_EOF(LIST_NEXT_ITEM):
-#line 327 "ls-sfparser.l"
+#line 332 "ls-sfparser.l"
 { return -1; }
 	YY_BREAK
 case 55:
 YY_RULE_SETUP
-#line 328 "ls-sfparser.l"
+#line 333 "ls-sfparser.l"
 /* Eat up whitespace */
 	YY_BREAK
 case 56:
 YY_RULE_SETUP
-#line 329 "ls-sfparser.l"
-{ CALLBACK(LS_SF_DT_INNER_LIST_BEGIN, yytext);
+#line 334 "ls-sfparser.l"
+{ CALLBACK(LS_SF_DT_INNER_LIST_BEGIN, yytext, yyleng, 0);
                                       BEGIN(INNER_LIST); }
 	YY_BREAK
 case 57:
 YY_RULE_SETUP
-#line 331 "ls-sfparser.l"
-{ CALLBACK(LS_SF_DT_INTEGER, yytext);
+#line 336 "ls-sfparser.l"
+{ CALLBACK(LS_SF_DT_INTEGER, yytext, yyleng, 0);
                                       BEGIN(LIST_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case 58:
 YY_RULE_SETUP
-#line 334 "ls-sfparser.l"
-{ CALLBACK(LS_SF_DT_DECIMAL, yytext);
+#line 339 "ls-sfparser.l"
+{ CALLBACK(LS_SF_DT_DECIMAL, yytext, yyleng, 0);
                                       BEGIN(LIST_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case 59:
 YY_RULE_SETUP
-#line 337 "ls-sfparser.l"
+#line 342 "ls-sfparser.l"
 {
                                       yytext[yyleng - 1] = '\0';
-                                      CALLBACK(LS_SF_DT_STRING, yytext + 1);
+                                      CALLBACK(LS_SF_DT_STRING, yytext + 1, yyleng - 2, 1);
                                       BEGIN(LIST_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case 60:
 YY_RULE_SETUP
-#line 342 "ls-sfparser.l"
-{ CALLBACK(LS_SF_DT_TOKEN, yytext);
+#line 347 "ls-sfparser.l"
+{ CALLBACK(LS_SF_DT_TOKEN, yytext, yyleng, 0);
                                       BEGIN(LIST_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case 61:
 YY_RULE_SETUP
-#line 345 "ls-sfparser.l"
+#line 350 "ls-sfparser.l"
 {
                                       yytext[yyleng - 1] = '\0';
-                                      CALLBACK(LS_SF_DT_BYTESEQ, yytext + 1);
+                                      CALLBACK(LS_SF_DT_BYTESEQ, yytext + 1, yyleng - 2, 1);
                                       BEGIN(LIST_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case 62:
 YY_RULE_SETUP
-#line 350 "ls-sfparser.l"
-{ CALLBACK(LS_SF_DT_BOOLEAN, yytext + 1);
+#line 355 "ls-sfparser.l"
+{ CALLBACK(LS_SF_DT_BOOLEAN, yytext + 1, yyleng - 1, 1);
                                       BEGIN(LIST_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
@@ -1663,103 +1667,103 @@ YY_RULE_SETUP
 
 case 63:
 YY_RULE_SETUP
-#line 356 "ls-sfparser.l"
+#line 361 "ls-sfparser.l"
 { return -1; }
 	YY_BREAK
 case 64:
 YY_RULE_SETUP
-#line 357 "ls-sfparser.l"
+#line 362 "ls-sfparser.l"
 /* Eat up whitespace */
 	YY_BREAK
 case 65:
 YY_RULE_SETUP
-#line 358 "ls-sfparser.l"
+#line 363 "ls-sfparser.l"
 { BEGIN(LIST_PARAM_KEY); }
 	YY_BREAK
 case 66:
 YY_RULE_SETUP
-#line 359 "ls-sfparser.l"
+#line 364 "ls-sfparser.l"
 { BEGIN(LIST_NEXT_ITEM); }
 	YY_BREAK
 
 case 67:
 YY_RULE_SETUP
-#line 362 "ls-sfparser.l"
-{ CALLBACK(LS_SF_DT_PARAM_NAME, yytext);
+#line 367 "ls-sfparser.l"
+{ CALLBACK(LS_SF_DT_PARAM_NAME, yytext, yyleng, 0);
                                         BEGIN(LIST_PARAM_EQ); }
 	YY_BREAK
 
 case 68:
 YY_RULE_SETUP
-#line 366 "ls-sfparser.l"
+#line 371 "ls-sfparser.l"
 { BEGIN(LIST_PARAM_ITEM); }
 	YY_BREAK
 case 69:
 YY_RULE_SETUP
-#line 367 "ls-sfparser.l"
+#line 372 "ls-sfparser.l"
 { TRUE[0] = '1';
-                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE);
+                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE, 1, -1);
                                       BEGIN(LIST_OPTIONAL_PARAM); }
 	YY_BREAK
 case 70:
 YY_RULE_SETUP
-#line 370 "ls-sfparser.l"
+#line 375 "ls-sfparser.l"
 { TRUE[0] = '1';
-                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE);
+                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE, 1, -1);
                                       BEGIN(LIST_PARAM_KEY); }
 	YY_BREAK
 case 71:
 YY_RULE_SETUP
-#line 373 "ls-sfparser.l"
+#line 378 "ls-sfparser.l"
 { TRUE[0] = '1';
-                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE);
+                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE, 1, -1);
                                       BEGIN(LIST_NEXT_ITEM); }
 	YY_BREAK
 
 
 case 72:
 YY_RULE_SETUP
-#line 379 "ls-sfparser.l"
-{ CALLBACK(LS_SF_DT_INTEGER, yytext);
+#line 384 "ls-sfparser.l"
+{ CALLBACK(LS_SF_DT_INTEGER, yytext, yyleng, 0);
                                       BEGIN(LIST_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case 73:
 YY_RULE_SETUP
-#line 382 "ls-sfparser.l"
-{ CALLBACK(LS_SF_DT_DECIMAL, yytext);
+#line 387 "ls-sfparser.l"
+{ CALLBACK(LS_SF_DT_DECIMAL, yytext, yyleng, 0);
                                       BEGIN(LIST_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case 74:
 YY_RULE_SETUP
-#line 385 "ls-sfparser.l"
+#line 390 "ls-sfparser.l"
 {
                                       yytext[yyleng - 1] = '\0';
-                                      CALLBACK(LS_SF_DT_STRING, yytext + 1);
+                                      CALLBACK(LS_SF_DT_STRING, yytext + 1, yyleng - 2, 1);
                                       BEGIN(LIST_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case 75:
 YY_RULE_SETUP
-#line 390 "ls-sfparser.l"
-{ CALLBACK(LS_SF_DT_TOKEN, yytext);
+#line 395 "ls-sfparser.l"
+{ CALLBACK(LS_SF_DT_TOKEN, yytext, yyleng, 0);
                                       BEGIN(LIST_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case 76:
 YY_RULE_SETUP
-#line 393 "ls-sfparser.l"
+#line 398 "ls-sfparser.l"
 {
                                       yytext[yyleng - 1] = '\0';
-                                      CALLBACK(LS_SF_DT_BYTESEQ, yytext + 1);
+                                      CALLBACK(LS_SF_DT_BYTESEQ, yytext + 1, yyleng - 2, 1);
                                       BEGIN(LIST_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case 77:
 YY_RULE_SETUP
-#line 398 "ls-sfparser.l"
-{ CALLBACK(LS_SF_DT_BOOLEAN, yytext + 1);
+#line 403 "ls-sfparser.l"
+{ CALLBACK(LS_SF_DT_BOOLEAN, yytext + 1, yyleng - 1, 1);
                                       BEGIN(LIST_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
@@ -1767,126 +1771,126 @@ YY_RULE_SETUP
 
 case 78:
 YY_RULE_SETUP
-#line 404 "ls-sfparser.l"
+#line 409 "ls-sfparser.l"
 /* Eat up whitespace */
 	YY_BREAK
 case 79:
 YY_RULE_SETUP
-#line 405 "ls-sfparser.l"
-{ CALLBACK(LS_SF_DT_INTEGER, yytext);
+#line 410 "ls-sfparser.l"
+{ CALLBACK(LS_SF_DT_INTEGER, yytext, yyleng, 0);
                                       BEGIN(ITEM_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case 80:
 YY_RULE_SETUP
-#line 408 "ls-sfparser.l"
-{ CALLBACK(LS_SF_DT_DECIMAL, yytext);
+#line 413 "ls-sfparser.l"
+{ CALLBACK(LS_SF_DT_DECIMAL, yytext, yyleng, 0);
                                       BEGIN(ITEM_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case 81:
 YY_RULE_SETUP
-#line 411 "ls-sfparser.l"
+#line 416 "ls-sfparser.l"
 {
                                       yytext[yyleng - 1] = '\0';
-                                      CALLBACK(LS_SF_DT_STRING, yytext + 1);
+                                      CALLBACK(LS_SF_DT_STRING, yytext + 1, yyleng - 2, 1);
                                       BEGIN(ITEM_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case 82:
 YY_RULE_SETUP
-#line 416 "ls-sfparser.l"
-{ CALLBACK(LS_SF_DT_TOKEN, yytext);
+#line 421 "ls-sfparser.l"
+{ CALLBACK(LS_SF_DT_TOKEN, yytext, yyleng, 0);
                                       BEGIN(ITEM_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case 83:
 YY_RULE_SETUP
-#line 419 "ls-sfparser.l"
+#line 424 "ls-sfparser.l"
 {
                                       yytext[yyleng - 1] = '\0';
-                                      CALLBACK(LS_SF_DT_BYTESEQ, yytext + 1);
+                                      CALLBACK(LS_SF_DT_BYTESEQ, yytext + 1, yyleng - 2, 1);
                                       BEGIN(ITEM_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case 84:
 YY_RULE_SETUP
-#line 424 "ls-sfparser.l"
-{ CALLBACK(LS_SF_DT_BOOLEAN, yytext + 1);
+#line 429 "ls-sfparser.l"
+{ CALLBACK(LS_SF_DT_BOOLEAN, yytext + 1, yyleng - 1, 1);
                                       BEGIN(ITEM_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case YY_STATE_EOF(ITEM):
-#line 427 "ls-sfparser.l"
+#line 432 "ls-sfparser.l"
 { return -1; }
 	YY_BREAK
 
 
 case 85:
 YY_RULE_SETUP
-#line 431 "ls-sfparser.l"
+#line 436 "ls-sfparser.l"
 /* Eat up whitespace */
 	YY_BREAK
 case 86:
 YY_RULE_SETUP
-#line 432 "ls-sfparser.l"
+#line 437 "ls-sfparser.l"
 { BEGIN(ITEM_PARAM_KEY); }
 	YY_BREAK
 
 
 case 87:
 YY_RULE_SETUP
-#line 436 "ls-sfparser.l"
+#line 441 "ls-sfparser.l"
 /* Eat up whitespace */
 	YY_BREAK
 case 88:
 YY_RULE_SETUP
-#line 437 "ls-sfparser.l"
-{ CALLBACK(LS_SF_DT_PARAM_NAME, yytext);
+#line 442 "ls-sfparser.l"
+{ CALLBACK(LS_SF_DT_PARAM_NAME, yytext, yyleng, 0);
                                         BEGIN(ITEM_PARAM_EQ); }
 	YY_BREAK
 
 
 case 89:
 YY_RULE_SETUP
-#line 442 "ls-sfparser.l"
+#line 447 "ls-sfparser.l"
 { BEGIN(ITEM); }
 	YY_BREAK
 case 90:
 YY_RULE_SETUP
-#line 443 "ls-sfparser.l"
+#line 448 "ls-sfparser.l"
 { TRUE[0] = '1';
-                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE);
+                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE, 1, -1);
                                       BEGIN(ITEM_OPTIONAL_PARAM);
                                     }
 	YY_BREAK
 case 91:
 YY_RULE_SETUP
-#line 447 "ls-sfparser.l"
+#line 452 "ls-sfparser.l"
 { TRUE[0] = '1';
-                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE);
+                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE, 1, -1);
                                       BEGIN(ITEM_PARAM_KEY);
                                     }
 	YY_BREAK
 case YY_STATE_EOF(ITEM_PARAM_EQ):
-#line 451 "ls-sfparser.l"
+#line 456 "ls-sfparser.l"
 { TRUE[0] = '1';
-                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE);
+                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE, 1, -1);
                                       return 0;
                                     }
 	YY_BREAK
 
 case 92:
 YY_RULE_SETUP
-#line 457 "ls-sfparser.l"
+#line 462 "ls-sfparser.l"
 { return -1; }
 	YY_BREAK
 case 93:
 YY_RULE_SETUP
-#line 459 "ls-sfparser.l"
+#line 464 "ls-sfparser.l"
 YY_FATAL_ERROR( "flex scanner jammed" );
 	YY_BREAK
-#line 1889 "ls-sfparser.c"
+#line 1893 "ls-sfparser.c"
 case YY_STATE_EOF(INITIAL):
 case YY_STATE_EOF(DICTIONARY):
 case YY_STATE_EOF(DIC_PARAM_KEY):
@@ -2435,10 +2439,6 @@ static void ls_sfp__load_buffer_state  (yyscan_t yyscanner)
 	ls_sfp_free((void *) b ,yyscanner );
 }
 
-#ifndef __cplusplus
-extern int isatty (int );
-#endif /* __cplusplus */
-    
 /* Initializes or reinitializes a buffer.
  * This function is sometimes called more than once on the same buffer,
  * such as during a ls_sfp_restart() or at EOF.
@@ -2463,7 +2463,7 @@ extern int isatty (int );
         b->yy_bs_column = 0;
     }
 
-        b->yy_is_interactive = file ? (isatty( fileno(file) ) > 0) : 0;
+        b->yy_is_interactive = 0;
     
 	errno = oerrno;
 }
@@ -3027,7 +3027,7 @@ static int yy_flex_strlen (yyconst char * s , yyscan_t yyscanner)
 
 #define YYTABLES_NAME "yytables"
 
-#line 459 "ls-sfparser.l"
+#line 464 "ls-sfparser.l"
 
 
 
@@ -3048,7 +3048,7 @@ const char *const ls_sf_dt2str[] =
 
 int
 ls_sf_parse (enum ls_sf_tlt top_level_type, const char *input, size_t input_sz,
-    int (*callback)(void *user_data, enum ls_sf_dt, char *str),
+    int (*callback)(void *user_data, enum ls_sf_dt, char *str, size_t, int),
     void *user_data, char *mem_buf, size_t mem_buf_sz)
 {
     struct ls_sf_parser parser;

@@ -30,7 +30,7 @@ struct ls_sf_parser
 {
     /* Return 0 on success, -1 on error to stop parsing. */
     int              (*callback)(void *user_data, enum ls_sf_dt,
-                                                        char *str);
+                                            char *str, size_t len, int off);
     void              *user_data;
     const char        *errmsg;
     enum ls_sf_tlt     top_level_type;
@@ -44,11 +44,15 @@ struct ls_sf_parser
     char              *last_malloced;
 };
 #define SFP ((struct ls_sf_parser *) yyextra)
-#define CALLBACK(dt_, str_) do {                                    \
-    if (SFP->callback(SFP->user_data, (dt_), (str_)))               \
+#define CALLBACK(dt_, str_, len_, addl_) do {                       \
+    if (SFP->callback(SFP->user_data, (dt_), (str_), (len_),        \
+            (addl_) >= 0 ?                                          \
+            yyg->yy_c_buf_p - yyleng - YY_CURRENT_BUFFER->yy_ch_buf + (addl_) :  \
+            (addl_)))                                               \
         return -1;                                                  \
 } while (0)
 #define YY_FATAL_ERROR(msg_) do {                                   \
+    (void) yy_fatal_error /* silence compiler warning */;           \
     ((struct ls_sf_parser *)                                        \
                 (yyget_extra(yyscanner)))->errmsg = (msg_);         \
     ((struct yyguts_t*)yyscanner)->yy_start = 1 + 2 * ERROR_STATE;  \
@@ -62,6 +66,7 @@ struct ls_sf_parser
 %option nounistd
 %option nodefault
 %option noyyrealloc noyyalloc noyyfree
+%option never-interactive
 
 DIGIT      [0-9]
 SP         \x20
@@ -115,60 +120,60 @@ BOOLEAN    \?[01]
 
 <DICTIONARY>{
     {SP}+                           /* Eat up whitespace */
-    {KEY}                           { CALLBACK(LS_SF_DT_NAME, yytext);
+    {KEY}                           { CALLBACK(LS_SF_DT_NAME, yytext, yyleng, 0);
                                       BEGIN(DIC_MEMBER_EQ); }
 }
 
 <DIC_NEXT_ITEM>{
     <<EOF>>                         { return -1; }
     {OWS}+                          /* Eat up whitespace */
-    {KEY}                           { CALLBACK(LS_SF_DT_NAME, yytext);
+    {KEY}                           { CALLBACK(LS_SF_DT_NAME, yytext, yyleng, 0);
                                       BEGIN(DIC_MEMBER_EQ); }
 }
 
-<DIC_MEMBER_EQ>=\({SP}*             { CALLBACK(LS_SF_DT_INNER_LIST_BEGIN, yytext + 1);
+<DIC_MEMBER_EQ>=\({SP}*             { CALLBACK(LS_SF_DT_INNER_LIST_BEGIN, yytext + 1, yyleng - 1, 1);
                                       BEGIN(INNER_LIST); }
 
 <DIC_MEMBER_EQ>=                    { BEGIN(DIC_MEMBER_ITEM); }
 
 <DIC_MEMBER_EQ>{SP}*;               { TRUE[0] = '1';
-                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE);
+                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE, 1, -1);
                                       BEGIN(DIC_PARAM_KEY); }
 
 <DIC_MEMBER_EQ>{OWS}*,{OWS}*        { TRUE[0] = '1';
-                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE);
+                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE, 1, -1);
                                       BEGIN(DIC_NEXT_ITEM); }
 
 <DIC_MEMBER_EQ><<EOF>>              { TRUE[0] = '1';
-                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE);
+                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE, 1, -1);
                                       return 0; }
 
 <INNER_LIST>{
-    \)                              { CALLBACK(LS_SF_DT_INNER_LIST_END, yytext);
+    \)                              { CALLBACK(LS_SF_DT_INNER_LIST_END, yytext, yyleng, 0);
                                       if (SFP->top_level_type == LS_SF_TLT_DICTIONARY)
                                           BEGIN(DIC_OPTIONAL_PARAM);
                                       else
                                           BEGIN(LIST_OPTIONAL_PARAM); }
-    {INTEGER}                       { CALLBACK(LS_SF_DT_INTEGER, yytext);
+    {INTEGER}                       { CALLBACK(LS_SF_DT_INTEGER, yytext, yyleng, 0);
                                       BEGIN(IL_OPTIONAL_PARAM);
                                     }
-    {DECIMAL}                       { CALLBACK(LS_SF_DT_DECIMAL, yytext);
+    {DECIMAL}                       { CALLBACK(LS_SF_DT_DECIMAL, yytext, yyleng, 0);
                                       BEGIN(IL_OPTIONAL_PARAM);
                                     }
     {DQUOTE}{CHR}*{DQUOTE}          {
                                       yytext[yyleng - 1] = '\0';
-                                      CALLBACK(LS_SF_DT_STRING, yytext + 1);
+                                      CALLBACK(LS_SF_DT_STRING, yytext + 1, yyleng - 2, 1);
                                       BEGIN(IL_OPTIONAL_PARAM);
                                     }
-    {TOKEN}                         { CALLBACK(LS_SF_DT_TOKEN, yytext);
+    {TOKEN}                         { CALLBACK(LS_SF_DT_TOKEN, yytext, yyleng, 0);
                                       BEGIN(IL_OPTIONAL_PARAM);
                                     }
     {COLON}{BASE64}*{COLON}         {
                                       yytext[yyleng - 1] = '\0';
-                                      CALLBACK(LS_SF_DT_BYTESEQ, yytext + 1);
+                                      CALLBACK(LS_SF_DT_BYTESEQ, yytext + 1, yyleng - 2, 1);
                                       BEGIN(IL_OPTIONAL_PARAM);
                                     }
-    {BOOLEAN}                       { CALLBACK(LS_SF_DT_BOOLEAN, yytext + 1);
+    {BOOLEAN}                       { CALLBACK(LS_SF_DT_BOOLEAN, yytext + 1, yyleng - 1, 1);
                                       BEGIN(IL_OPTIONAL_PARAM);
                                     }
     <<EOF>>                         { return -1; }
@@ -176,7 +181,7 @@ BOOLEAN    \?[01]
 
 <IL_OPTIONAL_PARAM>{
     {SP}*;{SP}*                     { BEGIN(IL_PARAM_KEY); }
-    \)                              { CALLBACK(LS_SF_DT_INNER_LIST_END, yytext);
+    \)                              { CALLBACK(LS_SF_DT_INNER_LIST_END, yytext, yyleng, 0);
                                       if (SFP->top_level_type == LS_SF_TLT_DICTIONARY)
                                           BEGIN(DIC_OPTIONAL_PARAM);
                                       else
@@ -185,20 +190,20 @@ BOOLEAN    \?[01]
     <<EOF>>                         { return -1; }
 }
 
-<IL_PARAM_KEY>{KEY}                 { CALLBACK(LS_SF_DT_PARAM_NAME, yytext);
+<IL_PARAM_KEY>{KEY}                 { CALLBACK(LS_SF_DT_PARAM_NAME, yytext, yyleng, 0);
                                         BEGIN(IL_PARAM_EQ); }
 
 <IL_PARAM_EQ>{
     =                               { BEGIN(IL_PARAM_ITEM); }
     {SP}+                           { TRUE[0] = '1';
-                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE);
+                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE, 1, -1);
                                       BEGIN(IL_OPTIONAL_PARAM); }
     ;                               { TRUE[0] = '1';
-                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE);
+                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE, 1, -1);
                                       BEGIN(IL_PARAM_KEY); }
     \)                              { TRUE[0] = '1';
-                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE);
-                                      CALLBACK(LS_SF_DT_INNER_LIST_END, yytext);
+                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE, 1, -1);
+                                      CALLBACK(LS_SF_DT_INNER_LIST_END, yytext, yyleng, 0);
                                       if (SFP->top_level_type == LS_SF_TLT_DICTIONARY)
                                           BEGIN(DIC_OPTIONAL_PARAM);
                                       else
@@ -206,52 +211,52 @@ BOOLEAN    \?[01]
 }
 
 <IL_PARAM_ITEM>{
-    {INTEGER}                       { CALLBACK(LS_SF_DT_INTEGER, yytext);
+    {INTEGER}                       { CALLBACK(LS_SF_DT_INTEGER, yytext, yyleng, 0);
                                       BEGIN(IL_OPTIONAL_PARAM);
                                     }
-    {DECIMAL}                       { CALLBACK(LS_SF_DT_DECIMAL, yytext);
+    {DECIMAL}                       { CALLBACK(LS_SF_DT_DECIMAL, yytext, yyleng, 0);
                                       BEGIN(IL_OPTIONAL_PARAM);
                                     }
     {DQUOTE}{CHR}*{DQUOTE}          {
                                       yytext[yyleng - 1] = '\0';
-                                      CALLBACK(LS_SF_DT_STRING, yytext + 1);
+                                      CALLBACK(LS_SF_DT_STRING, yytext + 1, yyleng - 2, 1);
                                       BEGIN(IL_OPTIONAL_PARAM);
                                     }
-    {TOKEN}                         { CALLBACK(LS_SF_DT_TOKEN, yytext);
+    {TOKEN}                         { CALLBACK(LS_SF_DT_TOKEN, yytext, yyleng, 0);
                                       BEGIN(IL_OPTIONAL_PARAM);
                                     }
     {COLON}{BASE64}*{COLON}         {
                                       yytext[yyleng - 1] = '\0';
-                                      CALLBACK(LS_SF_DT_BYTESEQ, yytext + 1);
+                                      CALLBACK(LS_SF_DT_BYTESEQ, yytext + 1, yyleng - 2, 1);
                                       BEGIN(IL_OPTIONAL_PARAM);
                                     }
-    {BOOLEAN}                       { CALLBACK(LS_SF_DT_BOOLEAN, yytext + 1);
+    {BOOLEAN}                       { CALLBACK(LS_SF_DT_BOOLEAN, yytext + 1, yyleng - 1, 1);
                                       BEGIN(IL_OPTIONAL_PARAM);
                                     }
     <<EOF>>                         { return -1; }
 }
 
 <DIC_MEMBER_ITEM>{
-    {INTEGER}                       { CALLBACK(LS_SF_DT_INTEGER, yytext);
+    {INTEGER}                       { CALLBACK(LS_SF_DT_INTEGER, yytext, yyleng, 0);
                                       BEGIN(DIC_OPTIONAL_PARAM);
                                     }
-    {DECIMAL}                       { CALLBACK(LS_SF_DT_DECIMAL, yytext);
+    {DECIMAL}                       { CALLBACK(LS_SF_DT_DECIMAL, yytext, yyleng, 0);
                                       BEGIN(DIC_OPTIONAL_PARAM);
                                     }
     {DQUOTE}{CHR}*{DQUOTE}          {
                                       yytext[yyleng - 1] = '\0';
-                                      CALLBACK(LS_SF_DT_STRING, yytext + 1);
+                                      CALLBACK(LS_SF_DT_STRING, yytext + 1, yyleng - 2, 1);
                                       BEGIN(DIC_OPTIONAL_PARAM);
                                     }
-    {TOKEN}                         { CALLBACK(LS_SF_DT_TOKEN, yytext);
+    {TOKEN}                         { CALLBACK(LS_SF_DT_TOKEN, yytext, yyleng, 0);
                                       BEGIN(DIC_OPTIONAL_PARAM);
                                     }
     {COLON}{BASE64}*{COLON}         {
                                       yytext[yyleng - 1] = '\0';
-                                      CALLBACK(LS_SF_DT_BYTESEQ, yytext + 1);
+                                      CALLBACK(LS_SF_DT_BYTESEQ, yytext + 1, yyleng - 2, 1);
                                       BEGIN(DIC_OPTIONAL_PARAM);
                                     }
-    {BOOLEAN}                       { CALLBACK(LS_SF_DT_BOOLEAN, yytext + 1);
+    {BOOLEAN}                       { CALLBACK(LS_SF_DT_BOOLEAN, yytext + 1, yyleng - 1, 1);
                                       BEGIN(DIC_OPTIONAL_PARAM);
                                     }
     <<EOF>>                         { return -1; }
@@ -267,51 +272,51 @@ BOOLEAN    \?[01]
 
 <DIC_PARAM_KEY>{
     {SP}+                           /* Eat up whitespace */
-    {KEY}                           { CALLBACK(LS_SF_DT_PARAM_NAME, yytext);
+    {KEY}                           { CALLBACK(LS_SF_DT_PARAM_NAME, yytext, yyleng, 0);
                                         BEGIN(DIC_PARAM_EQ); }
 }
 
 <DIC_PARAM_EQ>{
     =                               { BEGIN(DIC_PARAM_ITEM); }
     ,                               { TRUE[0] = '1';
-                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE);
+                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE, 1, -1);
                                       BEGIN(DIC_NEXT_ITEM);
                                     }
     ;                               { TRUE[0] = '1';
-                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE);
+                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE, 1, -1);
                                       BEGIN(DIC_PARAM_KEY);
                                     }
     {SP}+                           { TRUE[0] = '1';
-                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE);
+                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE, 1, -1);
                                       BEGIN(DIC_OPTIONAL_PARAM);
                                     }
     <<EOF>>                         { TRUE[0] = '1';
-                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE);
+                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE, 1, -1);
                                       return 0;
                                     }
 }
 
 <DIC_PARAM_ITEM>{
-    {INTEGER}                       { CALLBACK(LS_SF_DT_INTEGER, yytext);
+    {INTEGER}                       { CALLBACK(LS_SF_DT_INTEGER, yytext, yyleng, 0);
                                       BEGIN(DIC_OPTIONAL_PARAM);
                                     }
-    {DECIMAL}                       { CALLBACK(LS_SF_DT_DECIMAL, yytext);
+    {DECIMAL}                       { CALLBACK(LS_SF_DT_DECIMAL, yytext, yyleng, 0);
                                       BEGIN(DIC_OPTIONAL_PARAM);
                                     }
     {DQUOTE}{CHR}*{DQUOTE}          {
                                       yytext[yyleng - 1] = '\0';
-                                      CALLBACK(LS_SF_DT_STRING, yytext + 1);
+                                      CALLBACK(LS_SF_DT_STRING, yytext + 1, yyleng - 2, 1);
                                       BEGIN(DIC_OPTIONAL_PARAM);
                                     }
-    {TOKEN}                         { CALLBACK(LS_SF_DT_TOKEN, yytext);
+    {TOKEN}                         { CALLBACK(LS_SF_DT_TOKEN, yytext, yyleng, 0);
                                       BEGIN(DIC_OPTIONAL_PARAM);
                                     }
     {COLON}{BASE64}*{COLON}         {
                                       yytext[yyleng - 1] = '\0';
-                                      CALLBACK(LS_SF_DT_BYTESEQ, yytext + 1);
+                                      CALLBACK(LS_SF_DT_BYTESEQ, yytext + 1, yyleng - 2, 1);
                                       BEGIN(DIC_OPTIONAL_PARAM);
                                     }
-    {BOOLEAN}                       { CALLBACK(LS_SF_DT_BOOLEAN, yytext + 1);
+    {BOOLEAN}                       { CALLBACK(LS_SF_DT_BOOLEAN, yytext + 1, yyleng - 1, 1);
                                       BEGIN(DIC_OPTIONAL_PARAM);
                                     }
     <<EOF>>                         { return -1; }
@@ -326,28 +331,28 @@ BOOLEAN    \?[01]
 <LIST_NEXT_ITEM>{
     <<EOF>>                         { return -1; }
     {OWS}+                          /* Eat up whitespace */
-    \({SP}*                         { CALLBACK(LS_SF_DT_INNER_LIST_BEGIN, yytext);
+    \({SP}*                         { CALLBACK(LS_SF_DT_INNER_LIST_BEGIN, yytext, yyleng, 0);
                                       BEGIN(INNER_LIST); }
-    {INTEGER}                       { CALLBACK(LS_SF_DT_INTEGER, yytext);
+    {INTEGER}                       { CALLBACK(LS_SF_DT_INTEGER, yytext, yyleng, 0);
                                       BEGIN(LIST_OPTIONAL_PARAM);
                                     }
-    {DECIMAL}                       { CALLBACK(LS_SF_DT_DECIMAL, yytext);
+    {DECIMAL}                       { CALLBACK(LS_SF_DT_DECIMAL, yytext, yyleng, 0);
                                       BEGIN(LIST_OPTIONAL_PARAM);
                                     }
     {DQUOTE}{CHR}*{DQUOTE}          {
                                       yytext[yyleng - 1] = '\0';
-                                      CALLBACK(LS_SF_DT_STRING, yytext + 1);
+                                      CALLBACK(LS_SF_DT_STRING, yytext + 1, yyleng - 2, 1);
                                       BEGIN(LIST_OPTIONAL_PARAM);
                                     }
-    {TOKEN}                         { CALLBACK(LS_SF_DT_TOKEN, yytext);
+    {TOKEN}                         { CALLBACK(LS_SF_DT_TOKEN, yytext, yyleng, 0);
                                       BEGIN(LIST_OPTIONAL_PARAM);
                                     }
     {COLON}{BASE64}*{COLON}         {
                                       yytext[yyleng - 1] = '\0';
-                                      CALLBACK(LS_SF_DT_BYTESEQ, yytext + 1);
+                                      CALLBACK(LS_SF_DT_BYTESEQ, yytext + 1, yyleng - 2, 1);
                                       BEGIN(LIST_OPTIONAL_PARAM);
                                     }
-    {BOOLEAN}                       { CALLBACK(LS_SF_DT_BOOLEAN, yytext + 1);
+    {BOOLEAN}                       { CALLBACK(LS_SF_DT_BOOLEAN, yytext + 1, yyleng - 1, 1);
                                       BEGIN(LIST_OPTIONAL_PARAM);
                                     }
 }
@@ -359,69 +364,69 @@ BOOLEAN    \?[01]
     ,                               { BEGIN(LIST_NEXT_ITEM); }
 }
 
-<LIST_PARAM_KEY>{KEY}               { CALLBACK(LS_SF_DT_PARAM_NAME, yytext);
+<LIST_PARAM_KEY>{KEY}               { CALLBACK(LS_SF_DT_PARAM_NAME, yytext, yyleng, 0);
                                         BEGIN(LIST_PARAM_EQ); }
 
 <LIST_PARAM_EQ>{
     =                               { BEGIN(LIST_PARAM_ITEM); }
     {SP}+                           { TRUE[0] = '1';
-                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE);
+                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE, 1, -1);
                                       BEGIN(LIST_OPTIONAL_PARAM); }
     ;                               { TRUE[0] = '1';
-                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE);
+                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE, 1, -1);
                                       BEGIN(LIST_PARAM_KEY); }
     ,                               { TRUE[0] = '1';
-                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE);
+                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE, 1, -1);
                                       BEGIN(LIST_NEXT_ITEM); }
 }
 
 <LIST_PARAM_ITEM>{
-    {INTEGER}                       { CALLBACK(LS_SF_DT_INTEGER, yytext);
+    {INTEGER}                       { CALLBACK(LS_SF_DT_INTEGER, yytext, yyleng, 0);
                                       BEGIN(LIST_OPTIONAL_PARAM);
                                     }
-    {DECIMAL}                       { CALLBACK(LS_SF_DT_DECIMAL, yytext);
+    {DECIMAL}                       { CALLBACK(LS_SF_DT_DECIMAL, yytext, yyleng, 0);
                                       BEGIN(LIST_OPTIONAL_PARAM);
                                     }
     {DQUOTE}{CHR}*{DQUOTE}          {
                                       yytext[yyleng - 1] = '\0';
-                                      CALLBACK(LS_SF_DT_STRING, yytext + 1);
+                                      CALLBACK(LS_SF_DT_STRING, yytext + 1, yyleng - 2, 1);
                                       BEGIN(LIST_OPTIONAL_PARAM);
                                     }
-    {TOKEN}                         { CALLBACK(LS_SF_DT_TOKEN, yytext);
+    {TOKEN}                         { CALLBACK(LS_SF_DT_TOKEN, yytext, yyleng, 0);
                                       BEGIN(LIST_OPTIONAL_PARAM);
                                     }
     {COLON}{BASE64}*{COLON}         {
                                       yytext[yyleng - 1] = '\0';
-                                      CALLBACK(LS_SF_DT_BYTESEQ, yytext + 1);
+                                      CALLBACK(LS_SF_DT_BYTESEQ, yytext + 1, yyleng - 2, 1);
                                       BEGIN(LIST_OPTIONAL_PARAM);
                                     }
-    {BOOLEAN}                       { CALLBACK(LS_SF_DT_BOOLEAN, yytext + 1);
+    {BOOLEAN}                       { CALLBACK(LS_SF_DT_BOOLEAN, yytext + 1, yyleng - 1, 1);
                                       BEGIN(LIST_OPTIONAL_PARAM);
                                     }
 }
 
 <ITEM>{
     {SP}+                           /* Eat up whitespace */
-    {INTEGER}                       { CALLBACK(LS_SF_DT_INTEGER, yytext);
+    {INTEGER}                       { CALLBACK(LS_SF_DT_INTEGER, yytext, yyleng, 0);
                                       BEGIN(ITEM_OPTIONAL_PARAM);
                                     }
-    {DECIMAL}                       { CALLBACK(LS_SF_DT_DECIMAL, yytext);
+    {DECIMAL}                       { CALLBACK(LS_SF_DT_DECIMAL, yytext, yyleng, 0);
                                       BEGIN(ITEM_OPTIONAL_PARAM);
                                     }
     {DQUOTE}{CHR}*{DQUOTE}          {
                                       yytext[yyleng - 1] = '\0';
-                                      CALLBACK(LS_SF_DT_STRING, yytext + 1);
+                                      CALLBACK(LS_SF_DT_STRING, yytext + 1, yyleng - 2, 1);
                                       BEGIN(ITEM_OPTIONAL_PARAM);
                                     }
-    {TOKEN}                         { CALLBACK(LS_SF_DT_TOKEN, yytext);
+    {TOKEN}                         { CALLBACK(LS_SF_DT_TOKEN, yytext, yyleng, 0);
                                       BEGIN(ITEM_OPTIONAL_PARAM);
                                     }
     {COLON}{BASE64}*{COLON}         {
                                       yytext[yyleng - 1] = '\0';
-                                      CALLBACK(LS_SF_DT_BYTESEQ, yytext + 1);
+                                      CALLBACK(LS_SF_DT_BYTESEQ, yytext + 1, yyleng - 2, 1);
                                       BEGIN(ITEM_OPTIONAL_PARAM);
                                     }
-    {BOOLEAN}                       { CALLBACK(LS_SF_DT_BOOLEAN, yytext + 1);
+    {BOOLEAN}                       { CALLBACK(LS_SF_DT_BOOLEAN, yytext + 1, yyleng - 1, 1);
                                       BEGIN(ITEM_OPTIONAL_PARAM);
                                     }
     <<EOF>>                         { return -1; }
@@ -434,22 +439,22 @@ BOOLEAN    \?[01]
 
 <ITEM_PARAM_KEY>{
     {SP}+                           /* Eat up whitespace */
-    {KEY}                           { CALLBACK(LS_SF_DT_PARAM_NAME, yytext);
+    {KEY}                           { CALLBACK(LS_SF_DT_PARAM_NAME, yytext, yyleng, 0);
                                         BEGIN(ITEM_PARAM_EQ); }
 }
 
 <ITEM_PARAM_EQ>{
     =                               { BEGIN(ITEM); }
     {SP}+                           { TRUE[0] = '1';
-                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE);
+                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE, 1, -1);
                                       BEGIN(ITEM_OPTIONAL_PARAM);
                                     }
     ;                               { TRUE[0] = '1';
-                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE);
+                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE, 1, -1);
                                       BEGIN(ITEM_PARAM_KEY);
                                     }
     <<EOF>>                         { TRUE[0] = '1';
-                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE);
+                                      CALLBACK(LS_SF_DT_BOOLEAN, TRUE, 1, -1);
                                       return 0;
                                     }
 }
@@ -475,7 +480,7 @@ const char *const ls_sf_dt2str[] =
 
 int
 ls_sf_parse (enum ls_sf_tlt top_level_type, const char *input, size_t input_sz,
-    int (*callback)(void *user_data, enum ls_sf_dt, char *str),
+    int (*callback)(void *user_data, enum ls_sf_dt, char *str, size_t, int),
     void *user_data, char *mem_buf, size_t mem_buf_sz)
 {
     struct ls_sf_parser parser;

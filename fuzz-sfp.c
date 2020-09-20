@@ -6,7 +6,7 @@
 
 
 static int
-callback (void *user_data, enum ls_sf_dt type, char *str)
+callback (void *user_data, enum ls_sf_dt type, char *str, size_t len, int off)
 {
     return 0;
 }

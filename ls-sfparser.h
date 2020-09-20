@@ -36,12 +36,36 @@ enum ls_sf_dt
 {   /* LS SF DT: LiteSpeed Structured Field Data Type */
     LS_SF_DT_INTEGER,
     LS_SF_DT_DECIMAL,
+
+    /* Name only applies to dictionary names.  They may repeat: the
+     * parser does not drop duplicates.
+     */
     LS_SF_DT_NAME,
+
+    /* Parameter name may apply to any applicable preceding Item or
+     * Inner List.
+     */
     LS_SF_DT_PARAM_NAME,
+
+    /* The returned string does not include enclosing double quotes. */
     LS_SF_DT_STRING,
+
     LS_SF_DT_TOKEN,
+
+    /* The byte sequence is not base64-decoded; it is up to the caller
+     * to do so.  The returned string does not include the enclosing
+     * semicolons.
+     */
     LS_SF_DT_BYTESEQ,
+
+    /* Note that true boolean values are serialized *without* the values.
+     * The parser makes one up and passes a pointer to its internal buffer.
+     */
     LS_SF_DT_BOOLEAN,
+
+    /* The opening and closing parenthesis of the inner list are not really
+     * a data type, but they are included in this enum for expedience.
+     */
     LS_SF_DT_INNER_LIST_BEGIN,
     LS_SF_DT_INNER_LIST_END,
 };
@@ -58,14 +82,34 @@ enum ls_sf_tlt
 /* Return 0 if parsed correctly, -1 on error, -2 if ran out of memory. */
 int
 ls_sf_parse (
-    /* Expected type of top-level input: */
+    /* Expected type of top-level input.  This tells the parser how to
+     * parse the input.
+     */
     enum ls_sf_tlt,
 
     /* Input; does not have to be NUL-terminated: */
     const char *input, size_t input_sz,
 
-    /* Callback function to call each time a token is parsed: */
-    int (*)(void *user_data, enum ls_sf_dt, char *str),
+    /* Callback function to call each time a token is parsed.  A non-zero
+     * return value indicates that parsing should stop.
+     */
+    int (*callback)(
+        /* The first argument to the callback is user-specified additional
+         * data.
+         */
+        void *user_data,
+        /* The second argument is the data type. */
+        enum ls_sf_dt,
+        /* The third and fourth arguments are NUL-terminated string and
+         * its length, respectively.  The string can be modified, because
+         * the parser makes a copy.
+         */
+        char *str, size_t len,
+        /* Offset to the token in the input buffer.  In the special case
+         * of an implicit boolean value, this value is negative: this is
+         * because this value is not present in the input buffer.
+         */
+        int off),
 
     /* Additional data to pass to the callback: */
     void *user_data,
