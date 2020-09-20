@@ -54,7 +54,7 @@ enum ls_sf_dt
 
     /* The byte sequence is not base64-decoded; it is up to the caller
      * to do so.  The returned string does not include the enclosing
-     * semicolons.
+     * colons.
      */
     LS_SF_DT_BYTESEQ,
 
