@@ -63,8 +63,8 @@ enum ls_sf_dt
      */
     LS_SF_DT_BOOLEAN,
 
-    /* The opening and closing parenthesis of the inner list are not really
-     * a data type, but they are included in this enum for expedience.
+    /* The Inner List has a beginning and an end.  The returned strings
+     * are opening and closing parentheses.
      */
     LS_SF_DT_INNER_LIST_BEGIN,
     LS_SF_DT_INNER_LIST_END,
