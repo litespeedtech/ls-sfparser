@@ -172,14 +172,3 @@
  
  	/* It's okay to grow etc. this buffer, and we should throw it
  	 * away when we're done.
-@@ -2684,7 +2717,10 @@ YY_BUFFER_STATE ls_sfp__scan_bytes  (yyc
- 			yyg->yy_start_stack = (int *) ls_sfp_realloc((void *) yyg->yy_start_stack,new_size ,yyscanner );
- 
- 		if ( ! yyg->yy_start_stack )
-+        {
- 			YY_FATAL_ERROR( "out of memory expanding start-condition stack" );
-+            return;
-+        }
- 		}
- 
- 	yyg->yy_start_stack[yyg->yy_start_stack_ptr++] = YY_START;

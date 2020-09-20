@@ -53,18 +53,11 @@ struct ls_sf_parser
                 (yyget_extra(yyscanner)))->errmsg = (msg_);         \
     ((struct yyguts_t*)yyscanner)->yy_start = 1 + 2 * ERROR_STATE;  \
 } while (0)
-#define SAFE_POP() do {                                             \
-    if (((struct ls_sf_parser*)yyget_extra(yyscanner))->mem_failed) \
-        return -1;                                                  \
-    else                                                            \
-        yy_pop_state(yyscanner);                                    \
-} while (0)
 %}
 
 %option prefix="ls_sfp_"
 %option noyywrap noinput nounput noyy_top_state
 %option reentrant
-%option stack
 %option batch
 %option nounistd
 %option nodefault
@@ -133,9 +126,7 @@ BOOLEAN    \?[01]
                                       BEGIN(DIC_MEMBER_EQ); }
 }
 
-<DIC_MEMBER_EQ>=\({SP}*             { BEGIN(DIC_OPTIONAL_PARAM);
-                                      yy_push_state(INNER_LIST, yyscanner);
-                                      CALLBACK(LS_SF_DT_INNER_LIST_BEGIN, yytext + 1);
+<DIC_MEMBER_EQ>=\({SP}*             { CALLBACK(LS_SF_DT_INNER_LIST_BEGIN, yytext + 1);
                                       BEGIN(INNER_LIST); }
 
 <DIC_MEMBER_EQ>=                    { BEGIN(DIC_MEMBER_ITEM); }
@@ -154,7 +145,10 @@ BOOLEAN    \?[01]
 
 <INNER_LIST>{
     \)                              { CALLBACK(LS_SF_DT_INNER_LIST_END, yytext);
-                                      SAFE_POP(); }
+                                      if (SFP->top_level_type == LS_SF_TLT_DICTIONARY)
+                                          BEGIN(DIC_OPTIONAL_PARAM);
+                                      else
+                                          BEGIN(LIST_OPTIONAL_PARAM); }
     {INTEGER}                       { CALLBACK(LS_SF_DT_INTEGER, yytext);
                                       BEGIN(IL_OPTIONAL_PARAM);
                                     }
@@ -183,7 +177,10 @@ BOOLEAN    \?[01]
 <IL_OPTIONAL_PARAM>{
     {SP}*;{SP}*                     { BEGIN(IL_PARAM_KEY); }
     \)                              { CALLBACK(LS_SF_DT_INNER_LIST_END, yytext);
-                                      SAFE_POP(); }
+                                      if (SFP->top_level_type == LS_SF_TLT_DICTIONARY)
+                                          BEGIN(DIC_OPTIONAL_PARAM);
+                                      else
+                                          BEGIN(LIST_OPTIONAL_PARAM); }
     {SP}+                           { BEGIN(INNER_LIST); }
     <<EOF>>                         { return -1; }
 }
@@ -202,7 +199,10 @@ BOOLEAN    \?[01]
     \)                              { TRUE[0] = '1';
                                       CALLBACK(LS_SF_DT_BOOLEAN, TRUE);
                                       CALLBACK(LS_SF_DT_INNER_LIST_END, yytext);
-                                      SAFE_POP(); }
+                                      if (SFP->top_level_type == LS_SF_TLT_DICTIONARY)
+                                          BEGIN(DIC_OPTIONAL_PARAM);
+                                      else
+                                          BEGIN(LIST_OPTIONAL_PARAM); }
 }
 
 <IL_PARAM_ITEM>{
@@ -326,9 +326,7 @@ BOOLEAN    \?[01]
 <LIST_NEXT_ITEM>{
     <<EOF>>                         { return -1; }
     {OWS}+                          /* Eat up whitespace */
-    \({SP}*                         { BEGIN(LIST_OPTIONAL_PARAM);
-                                      yy_push_state(INNER_LIST, yyscanner);
-                                      CALLBACK(LS_SF_DT_INNER_LIST_BEGIN, yytext);
+    \({SP}*                         { CALLBACK(LS_SF_DT_INNER_LIST_BEGIN, yytext);
                                       BEGIN(INNER_LIST); }
     {INTEGER}                       { CALLBACK(LS_SF_DT_INTEGER, yytext);
                                       BEGIN(LIST_OPTIONAL_PARAM);
