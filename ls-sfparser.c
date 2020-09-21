@@ -3141,7 +3141,8 @@ ls_sfp_realloc (void *ptr, size_t bytes, void *yyscanner)
         {
             memcpy(ret, ptr,
                 /* We don't know how large it was, so just copy the max */
-                MAX(bytes, parser->mem + parser->mem_sz - (char *) ptr));
+                MAX(bytes, (size_t) (
+                                parser->mem + parser->mem_sz - (char *) ptr)));
             return ret;
         }
         else
