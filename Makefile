@@ -14,10 +14,10 @@ fuzz-sfp: fuzz-sfp.c ls-sfparser.c ls-sfparser.h
 	afl-gcc -O3 -o fuzz-sfp fuzz-sfp.c ls-sfparser.c
 	#cc -g3 -o fuzz-sfp fuzz-sfp.c ls-sfparser.c
 
-ls-sfparser.c:
-
 ls-sfparser.c: ls-sfparser.l
 	flex -o ls-sfparser.c ls-sfparser.l
+
+ls-sfparser.c:
 
 clean:
 	rm -vf test-sfp fuzz-sfp h3prio
