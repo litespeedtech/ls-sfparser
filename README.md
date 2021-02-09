@@ -2,7 +2,8 @@
 
 ## Introduction
 
-ls-sfparser is a [Structured Fields](https://github.com/httpwg/wiki/wiki/Structured-Headers) parser written in C.
+ls-sfparser is a [Structured Fields](https://github.com/httpwg/wiki/wiki/Structured-Fields)
+([RFC 8941](https://www.rfc-editor.org/rfc/rfc8941.html)) parser written in C.
 
 Features:
 - Simple streaming API
