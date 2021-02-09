@@ -22,8 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-/* The LiteSpeed Structured Fields Parser parses structured fields decribed in
- * https://tools.ietf.org/html/draft-ietf-httpbis-header-structure-19
+/* The LiteSpeed Structured Fields Parser parses structured fields (RFC 8941).
  *
  * It provides a simple streaming interface which allows the user to process
  * structured fields in any manner.

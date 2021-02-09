@@ -54,7 +54,7 @@ for each data type until the callback returns a non-zero value, until the end of
 `ls_sf_parse()` returns 0 on success and a negative value on failure.
 
 Creation of in-memory structures to represent the parsed Structured Fields and [base64-decoding](
-https://tools.ietf.org/html/draft-ietf-httpbis-header-structure-19#section-4.2.7) of Byte Sequences are left as an exercise for the
+https://www.rfc-editor.org/rfc/rfc8941.html#name-parsing-a-byte-sequence) of Byte Sequences are left as an exercise for the
 caller.  There are two reasons for making this design choice:
 1. Simplicity.  This parser can be used as a foundation for any Structured Fields representation of your choice.
 1. Efficiency.  No reason to base64-decode something before knowing whether it is needed at all.
