@@ -1,6 +1,10 @@
 CFLAGS=-Wall
 
-all: test-sfp h3prio
+all: test-sfp h3prio test-scratch
+
+.PHONY: check
+check: test-scratch
+	./test-scratch
 
 fuzz: fuzz-sfp
 
@@ -9,6 +13,9 @@ test-sfp: test-sfp.c ls-sfparser.c ls-sfparser.h
 
 h3prio: h3prio.c ls-sfparser.c ls-sfparser.h
 	cc ${CFLAGS} -o h3prio h3prio.c ls-sfparser.c
+
+test-scratch: test-scratch.c ls-sfparser.c ls-sfparser.h
+	cc ${CFLAGS} -o test-scratch test-scratch.c ls-sfparser.c
 
 fuzz-sfp: fuzz-sfp.c ls-sfparser.c ls-sfparser.h
 	afl-gcc -O3 -o fuzz-sfp fuzz-sfp.c ls-sfparser.c
@@ -20,4 +27,4 @@ ls-sfparser.c: ls-sfparser.l
 ls-sfparser.c:
 
 clean:
-	rm -vf test-sfp fuzz-sfp h3prio
+	rm -vf test-sfp fuzz-sfp h3prio test-scratch
